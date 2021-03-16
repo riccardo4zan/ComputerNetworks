@@ -6,7 +6,7 @@
 
 /**
  * This function exhanges the first two bytes of the 'in' param.
- * This function does not modify the pointers given, but it modifies
+ * This function does not modify the given pointers, but it modifies
  * the memory area refered by the given pointers.
  * param in: a pointer to a memory area containing the two bytes to exchange
  * param out: a pointer to a memory area containing the first tho bytes of 'in' exchanged
@@ -27,7 +27,7 @@ void exchange(char* in, char* out){
 
 /**
  * This function prints out two bytes (in exadecimal value) of the memory area refered by the param 'pointer'.
- * This function does not modify the pointer given.
+ * This function does not modify the given pointer.
  * param pointer: a pointer to a memory area
  */
 void print_two_bytes(char* pointer){
