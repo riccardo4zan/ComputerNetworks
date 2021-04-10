@@ -11,10 +11,10 @@
  * param in: a pointer to a memory area containing the two bytes to exchange
  * param out: a pointer to a memory area containing the first tho bytes of 'in' exchanged
  */ 
-void exchange(char* in, char* out){
+void exchange(unsigned char* in, unsigned char* out){
 	//Copy given pointers
-	char* cin = in;
-	char* cout = out;
+	unsigned char* cin = in;
+	unsigned char* cout = out;
 
 	//Second byte of 'in' copy in first byte of 'out'
 	cin++;
@@ -30,9 +30,9 @@ void exchange(char* in, char* out){
  * This function does not modify the given pointer.
  * param pointer: a pointer to a memory area
  */
-void print_two_bytes(char* pointer){
+void print_two_bytes(unsigned char* pointer){
 
-	char* cpointer = pointer;
+	unsigned char* cpointer = pointer;
 
 	//Printing out result
 	printf("%X\n", *cpointer);
@@ -44,14 +44,14 @@ int main(){
 	//One byte of memory stores two exadecimal values
 	unsigned short int myvalue = 0x0A0B;
 
-	char* pointer = (char*) &myvalue;
+	unsigned char* pointer = (unsigned char*) &myvalue;
 
 	printf("Input:\n");
 	print_two_bytes(pointer);
 	
 	unsigned short int myresult;
 
-	char* res_pointer = (char*) &myresult;
+	unsigned char* res_pointer = (unsigned char*) &myresult;
 
 	exchange(pointer, res_pointer);
 
