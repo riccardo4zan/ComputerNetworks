@@ -1,4 +1,4 @@
-# Reti di Calcolatori - Homeworks
+# Reti di Calcolatori
 
 Notes of **Reti di Calcolatori 2021**
 

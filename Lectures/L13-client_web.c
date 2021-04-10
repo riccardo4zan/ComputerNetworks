@@ -1,12 +1,13 @@
 /**
  * From socket documentation of Linux Programmer's Manual
- * You can visit it opening a terminal and writing:         man socket
+ * You can visit it opening a terminal and writing:             man socket
  */
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdio.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
 int main(){
 
@@ -36,6 +37,25 @@ int main(){
         perror("Socket failed");
         printf("errno=%d\n", socket_status);
     }
+    
+    /**
+     * Constructing the IP Packet 
+     * For reference visit:                                     man 7 ip
+     * For reference visit:                                     man 2 connect
+     */
+    
+    struct sockaddr_in addr;
 
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(80);
+
+    //216.58.213.100 google.com
+    unsigned char target_ip[4] = {216, 58, 213, 100};
+    //Bytes are inserted in BIG endian (network order)
+    addr.sin_addr.s_addr = *(unsigned int*)target_ip;
+
+    int connect_status = connect(s,(struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+
+    if(connect_status==-1) printf("Error while connecting");
 }
 
