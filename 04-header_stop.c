@@ -26,6 +26,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#define MAX_LENGTH 1000000  
+
 /**
  * Struct used to read HTTP headers
  * from the HTTP response
@@ -49,8 +51,7 @@ int main(){
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(80);
-    //216.58.213.100 google.com
-    unsigned char target_ip[4] = {216, 58, 213, 100};
+    unsigned char target_ip[4] = {216, 58, 213, 100};      //216.58.213.100 google.com
     addr.sin_addr.s_addr = *(unsigned int*)target_ip;
 
     int connect_status = connect(s,(struct sockaddr *)&addr, sizeof(struct sockaddr_in));
@@ -60,14 +61,14 @@ int main(){
     }
     
     char request[5000];
-    sprintf(request, "GET /pulto HTTP/1.0\r\n\r\n");
+    sprintf(request, "GET / HTTP/1.0\r\n\r\n");
     int request_status = write(s,request,strlen(request)); 
     if(request_status == -1){
         perror("Request failed");
         return 1;
     }
 
-    //Reading the response
+    //Reading the response headers
     char isHeaderCompleted = 0;
     char response[1000000];
 
@@ -107,14 +108,41 @@ int main(){
     }while(!isHeaderCompleted);
 
     //Reading from the header the content-length (if present)
-    unsigned int body_length;
+    unsigned int body_length=-1;
     for(int i=0;i<headers_length;i++){
-        if(strcmp("Content-Length",response_headers[i].name)==0) body_length = atol(response_headers[i].value);
+        if(strcmp("Content-Length",response_headers[i].name)==0){
+            body_length = atol(response_headers[i].value);
+        }
     }
 
-    //Reading the body of the response
-    char body[body_length];
-    read(s,&body,body_length);
+    //If not found in the header, set it up equal to the free space on the buffer
+    if(body_length==-1){
+        body_length=sizeof(response)-index-1;
+    }
+
+    printf("The entity body length is  %d bytes \n",body_length);
+
+    //Creating a pointer that references where the body starts in the buffer response
+    char* body = response + index;
+
+    unsigned int bytes_readed;
+    unsigned int body_read=0;
+    do{
+        //read() returns 0 when EOF is reached
+        bytes_readed = read(s,response+index,body_length);
+        index+= bytes_readed;
+        body_read+= bytes_readed;
+    }while(bytes_readed>0 && body_read<body_length);
+
+    response[index]='\0';
+
+    if(bytes_readed==-1){
+        perror("Read failed");
+        return -1;
+    }
+
+    //String terminator
+    response[index]='\0';
 
     //Printing headers
     printf("Status line: %s\n", statusline);
@@ -123,8 +151,6 @@ int main(){
     }
 
     //Printing body
-    printf("%s", body);
+    printf("%s\n", body);
     
 }
-
-
