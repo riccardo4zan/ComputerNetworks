@@ -16,6 +16,9 @@
 #include <string.h>
 #include <unistd.h>
 
+//Max length for an HTTP response of this program is 1cleMB
+#define MAX_LENGTH 1000000  
+
 int main(){
 
     int s = socket(AF_INET, SOCK_STREAM, 0);
@@ -58,18 +61,18 @@ int main(){
         return 1;
     }
 
-    char response[55000];
+    //Buffer of 10MB that contains the HTTP response
+    char response[MAX_LENGTH];
     
     //This variable stores the actual buffer (called response) usage
-    unsigned int index = 0;
-    
-    unsigned int bytes_readed = 0; 
-    
+    unsigned int index = 0;    
+    unsigned int bytes_readed = 0;
+    unsigned int buffer_termination; 
     do{
         //read() returns 0 when EOF is reached
-        bytes_readed = read(s,&response[index],14800);
+        buffer_termination = MAX_LENGTH-index-1;
+        bytes_readed = read(s,&response[index],buffer_termination);
         index+= bytes_readed;
-
     }while(bytes_readed>0);
 
     if(bytes_readed==-1){
