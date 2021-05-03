@@ -107,10 +107,14 @@ int main(){
 
     }while(!isHeaderCompleted);
 
+    //Bool variable, if true the length of the body is declared
+    char body_length_declared=0;
+
     //Reading from the header the content-length (if present)
     unsigned int body_length=-1;
     for(int i=0;i<headers_length;i++){
         if(strcmp("Content-Length",response_headers[i].name)==0){
+            body_length_declared=1;
             body_length = atol(response_headers[i].value);
         }
     }
@@ -132,7 +136,7 @@ int main(){
         bytes_readed = read(s,response+index,body_length);
         index+= bytes_readed;
         body_read+= bytes_readed;
-    }while(bytes_readed>0 && body_read<body_length);
+    }while(bytes_readed>0 && body_length_declared && body_read<body_length);
 
     response[index]='\0';
 
