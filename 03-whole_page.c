@@ -4,7 +4,7 @@
  * Definire staticamente un buffer in grado di contenere tutta la pagina
  * web mappata alla root di google e riportare tutta la pagina sul buffer
  * senza effettuare copie di bytes.
- * I dati devono essere scirri una sola volta dalla primitiva read() nel buffer.
+ * I dati devono essere scritti una sola volta dalla primitiva read() nel buffer.
  * Al termine una sola printf stampa tutto il buffer contenete tutta la pagina.
  */
 
