@@ -60,7 +60,7 @@ int main(){
 
     char request[5000];
 
-    sprintf(request, "GET / HTTP/1.1\r\nHost:www.google.com\r\n\r\n");    
+    sprintf(request, "GET / HTTP/1.0\r\nConnection:keep-alive\r\n\r\n"); 
     int request_status = write(s,request,strlen(request)); 
     if(request_status == -1){
         perror("Request failed");
@@ -118,34 +118,36 @@ int main(){
         }
     }
 
-    //If not found in the header, set it up equal to the free space on the buffer
+    //If not found in the header, set it up equal to the max
     if(body_length==-1){
-        body_length=sizeof(response)-index-1;
+        body_length=MAX_LENGTH;
     }
 
     printf("The entity body length is  %d bytes \n",body_length);
 
-    //Creating a pointer that references where the body starts in the buffer response 
-    char* body = response + index;
+    /**
+     * Reading the body
+     */
 
+    //Creating a pointer to the body 
+    char* body = (char*) malloc(body_length);
     unsigned int bytes_readed;
     unsigned int body_read=0;
+    index = 0;
+
     do{
         //read() returns 0 when EOF is reached
-        bytes_readed = read(s,response+index,body_length);
+        bytes_readed = read(s,body+index,body_length);
         index+= bytes_readed;
         body_read+= bytes_readed;
     }while(bytes_readed>0 && body_length_declared && body_read<body_length);
 
-    response[index]='\0';
+    body[index]='\0';
 
     if(bytes_readed==-1){
         perror("Read failed");
         return -1;
     }
-
-    //String terminator
-    response[index]='\0';
 
     //Printing headers
     printf("Status line: %s\n", statusline);
