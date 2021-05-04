@@ -40,9 +40,8 @@ struct header{
 int main(){
 
     int s = socket(AF_INET, SOCK_STREAM, 0);
-    int socket_status = 0;
     if(s==-1){
-        socket_status = errno;
+        int socket_status = errno;
         perror("Socket failed");
         printf("errno=%d\n", socket_status);
         return 1;
@@ -61,7 +60,7 @@ int main(){
     }
     
     char request[5000];
-    sprintf(request, "GET / HTTP/1.0\r\n\r\n");
+    sprintf(request, "GET /pluto HTTP/1.0\r\n\r\n");
     int request_status = write(s,request,strlen(request)); 
     if(request_status == -1){
         perror("Request failed");
@@ -69,30 +68,31 @@ int main(){
     }
 
     //Reading the response headers
-    char isHeaderCompleted = 0;
     char response[1000000];
 
-    char *statusline;
     struct header response_headers[100];
-    unsigned int index=0, headers_length=0;
+    unsigned int headers_length=0;
     /**
      * The first line of the HTTP request is different 
      * from the others. Other lines follows the grammar 
      * name: value
      */
-    statusline = response_headers[0].name = response;
+    char *statusline = response_headers[0].name = response;
 
-    do{
-        read(s,response+index,1);
+    char isHeaderCompleted = 0; //used as bool, 0==false otherwise true
+
+    for(int i=0;!isHeaderCompleted;i++){
+        //Reading the HTTP response byte per byte
+        read(s,response+i,1);
         
         //The second condition is required to read the date field correctly
-        if(response[index] == ':' && (response_headers[headers_length].value==0) ){
-            response[index]='\0';
-            response_headers[headers_length].value=response+index+1;
+        if(response[i] == ':' && (response_headers[headers_length].value==0) ){
+            response[i]='\0';
+            response_headers[headers_length].value=response+i+1;
         }
 
-        if(response[index]=='\n' && response[index-1]=='\r'){
-            response[index-1]='\0';
+        else if(response[i]=='\n' && response[i-1]=='\r'){
+            response[i-1]='\0';
 
             if(response_headers[headers_length].name[0]=='\0'){
                 isHeaderCompleted=1;
@@ -100,45 +100,37 @@ int main(){
             }
 
             headers_length++;
-            response_headers[headers_length].name=response+index+1;
+            response_headers[headers_length].name=response+i+1;
         }
-
-        index++;
-
-    }while(!isHeaderCompleted);
-
-    //Bool variable, if true the length of the body is declared
-    char body_length_declared=0;
+    }
 
     //Reading from the header the content-length (if present)
     unsigned int body_length=-1;
     for(int i=0;i<headers_length;i++){
         if(strcmp("Content-Length",response_headers[i].name)==0){
-            body_length_declared=1;
             body_length = atol(response_headers[i].value);
         }
     }
-
-    //If not found in the header, set it up equal to the free space on the buffer
-    if(body_length==-1){
-        body_length=sizeof(response)-index-1;
-    }
+    //If the size for the response's body is not declared, set it to max
+    if(body_length==-1) 
+        body_length=MAX_LENGTH;
 
     printf("The entity body length is  %d bytes \n",body_length);
 
     //Creating a pointer that references where the body starts in the buffer response
-    char* body = response + index;
+    char* body = (char*) malloc(body_length);
 
-    unsigned int bytes_readed;
-    unsigned int body_read=0;
+    unsigned int bytes_readed=0, offset=0;
+
     do{
-        //read() returns 0 when EOF is reached
-        bytes_readed = read(s,response+index,body_length);
-        index+= bytes_readed;
-        body_read+= bytes_readed;
-    }while(bytes_readed>0 && body_length_declared && body_read<body_length);
-
-    response[index]='\0';
+        /**
+         * read() returns 0 when EOF is reached or when body_length reaches 0,
+         * it means that there is no more space in the buffer
+         */ 
+        bytes_readed = read(s,body+offset,body_length);
+        offset+= bytes_readed;
+        body_length-=bytes_readed;
+    }while(bytes_readed>0);
 
     if(bytes_readed==-1){
         perror("Read failed");
@@ -146,7 +138,7 @@ int main(){
     }
 
     //String terminator
-    response[index]='\0';
+    body[offset]='\0';
 
     //Printing headers
     printf("Status line: %s\n", statusline);
