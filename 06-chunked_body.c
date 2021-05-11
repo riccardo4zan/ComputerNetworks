@@ -1,6 +1,6 @@
 /**
  * 
- * Refence: https://tools.ietf.org/html/rfc1945
+https://datatracker.ietf.org/doc/html/rfc2616#page-25
  * 
  * 
  * Linux's Programmer manual, references:
@@ -97,7 +97,7 @@ int main(){
         printf("%s ----> %s\n", h[i].n, h[i].v);
     }
 
-    //Additions
+    //Parsing the chunked body
 
     free(buffer);
     buffer=(char*)malloc(50);
@@ -112,48 +112,49 @@ int main(){
     unsigned int total_body_length=1;
     char* entity_body = (char*)malloc(1);
 
+    //This is a temporary buffer to store the exadecimal value of chunk length
+    char* tmp = buffer;
+    //This variable stores the decimal value of the chunk
     unsigned int chunk_length;
 
-    //This is a temporary buffer to store the exadecimal value of chunk length
-    bzero(buffer,50);
-    char* tmp = buffer;
-
-    //Reading chunk length
-    for(int i=0;read(s,buffer+i,1);i++){
-        if((buffer[i]=='\n') && (buffer[i-1]=='\r')){
-            buffer[i-1]=0;
-            break;
-        }
-    }
-    chunk_length = strtol(tmp,NULL,16);
-    total_body_length += chunk_length;
-    printf("Chunk length: %d\n",chunk_length);
-
-    while(chunk_length>0){ 
-        //Allocating the space and reading entity body
-        entity_body = (char*)realloc(entity_body,total_body_length); 
-        read(s,entity_body,chunk_length);
-       
-       	/*
-        //Look for another chunk length
-        bzero(buffer,50);
-        int t;
-        for(int i=0;t = read(s,buffer+i,1);i++){     
-            printf("%d",t);
-             if((buffer[i]=='\n') && (buffer[i-1]=='\r')){
+    do{
+        //Reading chunk length
+        for(int i=0;read(s,buffer+i,1);i++){
+            if((buffer[i]=='\n') && (buffer[i-1]=='\r')){
                 buffer[i-1]=0;
+                break;
             }
         }
-        if(t>0){
-            chunk_length = strtol(tmp,NULL,16);
-            total_body_length += chunk_length;
-            printf("Chunk length: %d\n",chunk_length);
-        } else*/ 
-            break;
-    }
+        chunk_length = strtol(tmp,NULL,16);
+        total_body_length += chunk_length;
 
-    
-    //Terminate the entity body and print it out
+        printf("Chunk length: %d\n",chunk_length);
+
+        //Allocating the space for the entity body
+        entity_body=(char*) realloc(entity_body,total_body_length);
+
+        /**
+         * Read byte for byte, reading the size of the chunk
+         * is not possible  
+         */
+        for(int i=0;i<chunk_length;i++){
+            read(s,entity_body+i,1);
+        }
+        
+        /**
+         * Is mandatory to discard 2 bytes to pass to the read function a pointer,
+         * if NULL passed, it returns 0.
+         */
+        char discard[2];
+        read(s,discard,2);
+        if(discard[0]=='\r' && discard[1]=='\n') printf ("FINE CHUNK\n");
+
+    }while(chunk_length>0);
+
+    /**
+     * Printing out results
+     */
+    printf("Total length: %d\n",total_body_length);
     entity_body[total_body_length]=0;
     printf("%s",entity_body);
 
