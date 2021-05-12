@@ -1,6 +1,5 @@
 /**
- * 
-https://datatracker.ietf.org/doc/html/rfc2616#page-25
+ * https://datatracker.ietf.org/doc/html/rfc2616#page-25
  * 
  * 
  * Linux's Programmer manual, references:
@@ -100,7 +99,6 @@ int main(){
     //Parsing the chunked body
 
     free(buffer);
-    buffer=(char*)malloc(50);
 
     /**
      * Reading the first line of the chunked body, until CRLF is found
@@ -113,32 +111,30 @@ int main(){
     char* entity_body = (char*)malloc(1);
 
     //This is a temporary buffer to store the exadecimal value of chunk length
-    char* tmp = buffer;
+    char* tmp = (char*)malloc(50);;
     //This variable stores the decimal value of the chunk
     unsigned int chunk_length;
 
     do{
         //Reading chunk length
-        for(int i=0;read(s,buffer+i,1);i++){
-            if((buffer[i]=='\n') && (buffer[i-1]=='\r')){
-                buffer[i-1]=0;
+        for(int i=0;read(s,tmp+i,1);i++){
+            if((tmp[i]=='\n') && (tmp[i-1]=='\r')){
+                tmp[i-1]=0;
                 break;
             }
         }
         chunk_length = strtol(tmp,NULL,16);
-        total_body_length += chunk_length;
-
-        printf("Chunk length: %d\n",chunk_length);
 
         //Allocating the space for the entity body
-        entity_body=(char*) realloc(entity_body,total_body_length);
+        unsigned int size = total_body_length+chunk_length+1;
+        entity_body=(char*) realloc(entity_body,size);
 
         /**
-         * Read byte for byte, reading the size of the chunk
-         * is not possible  
+         * Read byte for byte, reading the size of the chunk is not possible  
          */
         for(int i=0;i<chunk_length;i++){
-            read(s,entity_body+i,1);
+            total_body_length++;
+            read(s,entity_body+total_body_length,1);
         }
         
         /**
@@ -147,7 +143,7 @@ int main(){
          */
         char discard[2];
         read(s,discard,2);
-        if(discard[0]=='\r' && discard[1]=='\n') printf ("FINE CHUNK\n");
+        //if(discard[0]=='\r' && discard[1]=='\n') printf ("FINE CHUNK\n");
 
     }while(chunk_length>0);
 
@@ -155,7 +151,7 @@ int main(){
      * Printing out results
      */
     printf("Total length: %d\n",total_body_length);
-    entity_body[total_body_length]=0;
+    entity_body[total_body_length+1]=0;
     printf("%s",entity_body);
 
 }
