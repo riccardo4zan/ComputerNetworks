@@ -23,135 +23,158 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MAX_LENGTH 10000
-
+// C structure to contain HTTP num_head
 struct header{
-    char *n;
-    char *v;
-};
+    char * n;
+    char * v;
+} h[100];
 
-int main(){
-
-    struct sockaddr_in addr;
-    char request[5000]; 
-    unsigned char targetip[4] = {216, 58, 213, 100};
-
-    //This variable contains the number of the socket opened by the SO
-    int s;
-    s = socket(AF_INET, SOCK_STREAM, 0);
-    if (s == -1){
-        int tmp = errno;
+int main() {
+    /* 
+       SOCKET INITIALIZATION : socket (domain, type, protocol)
+           domain : AF_INET --> IPv4 Internet Protocols
+           type : SOCK_STREAM --> connection-based byte stream
+           protocol: 0 --> tcp stream socket
+     */
+    int s = socket(AF_INET, SOCK_STREAM, 0);
+    if(s == -1) {
+        // error while creating the socket, print it and end the execution
+        // using errno sys variable (<errno.h> necessary)
+        int errorcode = errno;
         perror("Socket fallita");
-        printf("errno=%d\n", tmp);
+        printf("errno=%d\n", errorcode);
         return 1;
     }
+
+    /*
+      CONNECTION OPENING : connect(sockfd, addr, addrlen)
+          sockfd : socket file descriptor
+          addr : sockaddr struct pointer containing the peer address
+                 we declare a sockaddr_in struct and then cast to (struct sockaddr*)
+          addrlen: length of the address struct
+     */
+    unsigned char targetip[4] = { 142,250,180,14 };
+    struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(80);
-    addr.sin_addr.s_addr = *(unsigned int *)targetip; // <indirizzo ip del server 216.58.213.100 >
+    addr.sin_addr.s_addr = *(unsigned int*) targetip;  
+    if ( -1 == connect(s, (struct sockaddr *) &addr, sizeof(struct sockaddr_in)))
+	    perror("Connect fallita");
 
-    if (-1 == connect(s, (struct sockaddr *)&addr, sizeof(struct sockaddr_in))) perror("Connect fallita");
-   
-    printf("Socket number: %d\n", s);
-
-	sprintf(request,"GET / HTTP/1.1\r\nHost:www.google.com\r\n\r\n");
-
-    if (-1 == write(s, request, strlen(request))){ perror("write fallita"); return 1;}
-
-    //This array of struct stores the headers (100 at most)
-    struct header h[100];
-
-    //Buffer is used to parse the response    
-    char* buffer;
-    buffer = (char*)malloc(MAX_LENGTH);
-
-    char *statusline = h[0].n = buffer;
-
-    //This variable stores the number of headers 
-    int k=0;
-
-    for (int i = 0; read(s, buffer + i, 1); i++){
-        if (buffer[i] == ':' && (h[k].v == 0)){
-            buffer[i] = 0;
-            //Trim the first space
-            h[k].v = buffer + i + 2;
-        }
-        else if ((buffer[i] == '\n') && (buffer[i - 1] == '\r')){
-            buffer[i - 1] = 0;
-            if (h[k].n[0] == 0)
-                break;
-            h[++k].n = buffer + i + 1;
-        }
-
-    }
-
-    printf("Status line = %s\n", statusline);
-
-    //Printing out header
-    for (int i = 1; i < k; i++){
-        //Search if present Content-Length header
-        if (strcmp(h[i].n, "Transfer-Encoding") == 0 && strcmp(h[i].v,"chunked") == 0){
-            printf("\n *** FOUND CHUNKED BODY ***\n");
-        }
-        //Printing header
-        printf("%s ----> %s\n", h[i].n, h[i].v);
-    }
-
-    //Parsing the chunked body
-
-    free(buffer);
-
-    /**
-     * Reading the first line of the chunked body, until CRLF is found
-     * is possible that the chunked body contains chunked header but we are
-     * not intrested in it. It's guaranteed by the grammar that the first number 
-     * is the exadecimal rappresentation of how long the chunked body is.
-    */
-
-    unsigned int total_body_length=1;
-    char* entity_body = (char*)malloc(1);
-
-    //This is a temporary buffer to store the exadecimal value of chunk length
-    char* tmp = (char*)malloc(50);;
-    //This variable stores the decimal value of the chunk
-    unsigned int chunk_length;
-
-    do{
-        //Reading chunk length
-        for(int i=0;read(s,tmp+i,1);i++){
-            if((tmp[i]=='\n') && (tmp[i-1]=='\r')){
-                tmp[i-1]=0;
-                break;
-            }
-        }
-        chunk_length = strtol(tmp,NULL,16);
-
-        //Allocating the space for the entity body
-        unsigned int size = total_body_length+chunk_length+1;
-        entity_body=(char*) realloc(entity_body,size);
-
-        /**
-         * Read byte for byte, reading the size of the chunk is not possible  
-         */
-        for(int i=0;i<chunk_length;i++){
-            total_body_length++;
-            read(s,entity_body+total_body_length,1);
-        }
-        
-        /**
-         * Is mandatory to discard 2 bytes to pass to the read function a pointer,
-         * if NULL passed, it returns 0.
-         */
-        char discard[2];
-        read(s,discard,2);
-        //if(discard[0]=='\r' && discard[1]=='\n') printf ("FINE CHUNK\n");
-
-    }while(chunk_length>0);
-
-    /**
-     * Printing out results
+    /*
+      SEND HTTP REQUEST : write(sockfd, buffer, count)
+          sockfd : socket file descriptor
+          buffer : pointer to the first byte to be sent
+          count : number of bytes to be sent
      */
-    printf("Total length: %d\n",total_body_length);
-    entity_body[total_body_length+1]=0;
-    printf("%s",entity_body);
+    // write the HTTP request in the request buffer
+    char request[5000], response[10000];  
+    sprintf(request, "GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n");
+    // send the request to the server
+    if ( -1 == write(s,request,strlen(request))) {
+        // could not send the request, print the error and terminate the program
+        perror("write fallita"); 
+        return 1;
+    }
+    // clean the header structures array
+    bzero(h, sizeof(struct header)*100);
+    // status line is the first part of the response
+    // BE CAREFUL response is needed here
+    char* statusline = h[0].n = response;
+         
+    /* 
+     HEADER PARSING
+         check the corresponding HTTP grammar to understand the underlying logic
+     */
+    int is_chunked = 0;
+    int content_length = -1;
+    int num_head = 0;
+    for(int j=0; read(s, response+j, 1); j++) {
+        if((response[j] == ':') && (h[num_head].v == 0)) {
+            // reached the end of the header name
+            // replace the ':' with a string terminator and initialize the header value pointer
+            // +2 to trim the space after the ':'
+            response[j] = 0;
+            h[num_head].v = response + j + 2;
+        }
+        else if((response[j] == '\n') && (response[j-1] == '\r')) {
+            // end of the header name
+            response[j-1] = 0;
+            // if there are no longer num_head, break
+            if(h[num_head].n[0] == 0) break;
 
+            if(!is_chunked && num_head != 0 && !strcmp(h[num_head].n, "Content-Length"))
+                // if content-length header is found, get the content length
+                content_length = atoi(h[num_head].v);
+            
+            if(content_length < 0 && num_head != 0 && !strcmp(h[num_head].n, "Transfer-Encoding") && !strcmp(h[num_head].v, "chunked"))  
+                // if chunked header is found, set the corresponding flag
+                is_chunked = 1;
+
+            // set the pointer to the next header name
+            h[++num_head].n = response + j + 1;
+        }
+    }
+
+    /*
+     DYNAMIC BODY ALLOCATION
+     the buffer for the body is initially created with a standard size of 10kB
+     then, if the body length is known, resize it
+     chunked body parsing is also implemented in this section
+    */
+    char * body = (char*) malloc(10000);
+    int bytes_read;
+    if(!is_chunked) {
+        // if the Content-length header is specified, realloc the body buffer to fit
+        // the actual size of the body
+        if(content_length > 0) body = (char*) realloc(body, content_length);
+        // otherwise, update the content_length value to the size of the body buffer
+        else content_length = 10000;
+        // write the body to the buffer
+        for(int i=0; bytes_read=read(s, body+i, content_length-i); i+=bytes_read);
+    } else {
+        
+        /*
+         CHUNKED BODY MANAGEMENT
+         */
+        content_length = 0;
+        int size;
+        // define a char array to store the size of chunks
+        char chunk_size[50];
+        // intialize first two characters of the size to "0x", in order to make the conversion easier
+        chunk_size[0] = '0';
+        chunk_size[1] = 'x';
+        do {
+            // parse the hexadecimal size of the chunk
+            // stop the parsing when get an CRLF (case without chunk-extension) or when
+            // an ; is found (case with chunk-extension)
+            int ext = -1;
+            for(int i=2; bytes_read = read(s, chunk_size+i, 1); i++) {
+                // if an ';' is retrived, save the position (extension management)
+                if(chunk_size[i] == ';') ext = i;
+                // if the end of the chunk size is reached
+                if(chunk_size[i] == '\n' && chunk_size[i-1] == '\r') {
+                    // set terminator and exit from the cicle
+                    if(ext < 0) chunk_size[i-1] = 0;
+                    else chunk_size[ext] = 0;
+                    break;
+                }
+            }
+            // convert the hexadecimal string in decimal
+            size = strtol(chunk_size, NULL, 16);
+            // if it's not the last-chunk
+            if(size > 0) {
+                // realloc the body buffer to fit the new content length
+                body = (char*) realloc(body, content_length + size + 2);
+                // write the chunk data into the body buffer
+                for(int j=0; (bytes_read=read(s, body + content_length + j, size + 2 - j))>0; j+=bytes_read);
+                // sum the size of the chunk to the total body size
+                content_length += size;
+            }
+
+         } while(size > 0); 
+    }
+
+    // print the body
+    printf("%s", body);
 }
