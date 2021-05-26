@@ -67,6 +67,6 @@ lines = file.readlines()
 
 print("Speed Mbit/s:",speed(lines))
 
-want_xlsx = input("Premi Y per creare il file dati.xlsx")
+want_xlsx = input("Premi Y per creare il file dati.xlsx\n")
 if(want_xlsx == 'Y'):
     toXLSX(lines)
