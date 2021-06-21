@@ -1,0 +1,8 @@
+Esercizio dato a lezione 29: Modificare il server per /cgi-bin/ in modo tale che l'url possa contenere i parameteri dei comandi /cgi/bin/ls?p1=-l&p2=-a
+
+Esercizio dato a lezione 32: Implementare il caching con gli headers
+
+Esercizio dato a lezione 32: Implementare authentication sul server web
+
+Esercizio dato a lezione 34: Mostrare indirizzo IP e Porta di chi si collega sulla accept del server web
+
