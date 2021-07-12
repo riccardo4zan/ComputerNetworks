@@ -6,5 +6,6 @@ Notes of **Reti di Calcolatori 2021**
 * 4-exams: contiene temi d'esame svolti e da svolgere
 
 ## Credits
-* <a href="https://github.com/nicomazz/ComputerNetworks-unipd2018">Reti GitHub 2019</a>
-* <a href="https://github.com/tommaso-green/Computer_Networks">Fork 2020</a>
+* [Reti GitHub 2019](https://github.com/nicomazz/ComputerNetworks-unipd2018)
+* [Fork 2020](https://github.com/tommaso-green/Computer_Networks)
+* [upgraded-octo-computing-machine](https://github.com/giacomocamposampiero/upgraded-octo-computing-machine)
